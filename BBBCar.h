@@ -5,12 +5,16 @@
 
 typedef struct CarControlData_t{
 	
+	int carControlParam;
+	
 	int steering;
+	int steeringState;//衝突電流対策
 	BBB_gpio **steeringGpio;
 	int steeringPinNum;
 	int spwm;
 	
 	int drive;
+	int driveState;//衝突電流対策
 	BBB_gpio **driveGpio;
 	int drivePinNum;
 	int dpwm;

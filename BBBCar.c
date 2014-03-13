@@ -3,6 +3,8 @@
 #include <BBB_GPIO.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
+
 void BBB_gpioArray_init(BBB_gpio **paramGpio, char **paramPinName, int paramPinNum){
 	int i = 0;
 	while(i < paramPinNum){
@@ -51,6 +53,7 @@ void CCData_set(CCData *paramCCData, int paramData){
 	spwm = (paramData >> 4) & 255;
 	dpwm = (paramData >> 12) & 255;
 	
+	paramCCData->carControlParam = paramData;
 	paramCCData->steering = steering;
 	paramCCData->spwm = spwm;
 	paramCCData->drive = drive;
@@ -68,13 +71,31 @@ void CCData_close(CCData *paramCCData){
 }
 
 void carControl(CCData *paramCCData){
+
+	int s = paramCCData->steering;
+	int ss = paramCCData->steeringState;
+	int d = paramCCData->drive;
+	int ds = paramCCData->driveState;
+	
+	/* 正転⇔逆転、正転or逆転⇔ブレーキ時を判定して100us待機 */
+	int steeringWaitFlag = ((s < 3)&(ss < 3)&((s ^ ss) == 3)) | ((s > 0) & (ss == 3));
+	int driveWaitFlag = ((d < 3)&(ds < 3)&((d ^ ds) == 3)) | ((d > 0) & (ds == 3));
+	if(steeringWaitFlag | driveWaitFlag) usleep(100);
+	
 	motorDrive(paramCCData->steeringGpio, paramCCData->steering);
 	motorDrive(paramCCData->driveGpio, paramCCData->drive);
+
+	if(paramCCData->steering != NULL){
+		paramCCData->steeringState = paramCCData->steering;
+	}
+	if(paramCCData->drive != NULL){
+		paramCCData->driveState = paramCCData->drive;
+	}
 }
 
 void motorDrive(BBB_gpio **paramGpio, int paramData){
 /* **paramGpioはモーター制御用の信号ピンを制御するBBB_gpioの配列（要素は2つ）
-	dataのビット値でモーターの制御をする
+	paramDataのビット値でモーターの制御をする
  		00 : フリー
  		01 : 正回転
  		10 : 逆回転
