@@ -1,5 +1,4 @@
-#include <BBB.h>
-#include <BBB_GPIO.h>
+ï»¿#include "BBBCar.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -7,80 +6,47 @@
 #include <sys/socket.h>
 #define CONTROLPIN 2
 #define MAXPENDING 5
+#define STRINGLENGTH 8
 
+char frontPinName[CONTROLPIN][STRINGLENGTH] = {"P9_11", "P9_12"};
+char rearPinName[CONTROLPIN][STRINGLENGTH] = {"P9_13", "P9_14"};
+
+void init();
+void signalCatch(int);
 void errMsg(char *);
 void HandleTCPClient(int);
-void motorControl(BBB_gpio **paramGpio, int data);
-void gpioInit(BBB_gpio **, int);
+void endProcess();
 
-const char frontPinName[CONTROLPIN][] = {"P9_11", "P9_12"};
-const char rearPinName[CONTROLPIN][] = {"P9_13", "P9_14"};
+BBB_gpio *frontGpio[CONTROLPIN];
+BBB_gpio *rearGpio[CONTROLPIN];
 
-int main(int argc, char *argv[])
+int main()
 {
-	BBB_gpio **frontGpio = gpioInit(frontPinName, CONTROLPIN);
-	BBB_gpio *rearGpio = gpioInit(rearPinName, CONTROLPIN);
+	init();
+	
 
 	
-	int i;
-
-
-
 	
-	gpioClose(frontGpio, CONTROLPIN);
-	gpioClose(rearGpio, CONTROLPIN);
-	
+	return 0;
 }	
 
-void motorControl(BBB_gpio **paramGpio, int paramData){
-/* *pin‚Íƒ‚[ƒ^[§Œä—p‚ÌM†ƒsƒ“‚ğ§Œä‚·‚éBBB_gpio‚Ì”z—ñi—v‘f‚Í2‚Âj */
-/* data‚Ìƒrƒbƒg’l‚Åƒ‚[ƒ^[‚Ì§Œä‚ğ‚·‚é	*/
-/* 		00 : ƒtƒŠ[		*/
-/* 		01 : ³‰ñ“]		*/
-/* 		10 : ‹t‰ñ“]		*/
-/* 		11 : ƒuƒŒ[ƒL		*/
-	switch(paramData){
-		case 0:	//00
-		paramGpio[0]->put(paramGpio[0], 0);
-		paramGpio[1]->put(paramGpio[1], 0);
-		break;
-
-		case 1:	//01
-		paramGpio[0]->put(paramGpio[0], 0);
-		paramGpio[1]->put(paramGpio[1], 0);
-		break;
-	
-		case 2:	//10
-		paramGpio[0]->put(paramGpio[0], 0);
-		paramGpio[1]->put(paramGpio[1], 0);
-		break;
-
-		case 3:	//11
-		paramGpio[0]->put(paramGpio[0], 0);
-		paramGpio[1]->put(paramGpio[1], 0);
-		break;
-
-		default:
-		break;
+void init(){
+	if(SIG_ERR == signal(SIGINT, signalCatch){
+		puts("ã‚·ã‚°ãƒŠãƒ«ãƒãƒ³ãƒ‰ãƒ©ã®ç™»éŒ²ã«å¤±æ•—ã—ã¾ã—ãŸ";
+		exit(EXIT_FAILURE);
 	}
+	BBB_gpioArray_init(frontGpio, (char **)frontPinName, CONTROLPIN);
+	BBB_gpioArray_init(rearGpio, (char **)rearPinName, CONTROLPIN);
 }
-BBB_gpio gpioInit(char **paramPinName, int paramPinNum){
-	int i = 0;
-	BBB_gpio *temp[paramPinNum];
-	while(i < paramPinNum){
-		if((temp[i] = BBB_open_gpio(paramPinName[i])) == NULL ) {
-			printf("Can not open %s\n", paramPinName[i] );
-			exit(EXIT_FAILURE);
-		}
-		temp[i]->set_direction(temp[i], OUT);
-		temp[i]->put(temp[i], 0);
-		i++;
+
+void signalCatch(int sig){
+	if(sig == SIGINT){
+		endProcess();
 	}
-	return temp;
+	exit(EXIT_SUCCESS);
 }
-void gpioClose(BBB_gpio **paramGpio, int paramPinNum){
-	int i = 0;
-	white(i < paramPinNum){
-		BBB_close_gpio(paramGpio[i++]);
-	}
+
+void endProcess(){
+	BBB_gpioArray_close(frontGpio, CONTROLPIN);
+	BBB_gpioArray_close(rearGpio, CONTROLPIN);
 }
