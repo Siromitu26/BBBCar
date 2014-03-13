@@ -3,7 +3,6 @@
 #include <BBB_GPIO.h>
 #include <stdio.h>
 #include <stdlib.h>
-#define GPIOARRAYLENGTH 2
 void BBB_gpioArray_init(BBB_gpio **paramGpio, char **paramPinName, int paramPinNum){
 	int i = 0;
 	while(i < paramPinNum){
@@ -26,13 +25,15 @@ void BBB_gpioArray_close(BBB_gpio **paramGpio, int paramPinNum){
 	}
 }
 
-CCData *CCData_create(int paramData, BBB_gpio **paramSteeringGpio, BBB_gpio **paramDriveGpio){
+CCData *CCData_create(int paramData, char **paramSteeringPinName, int paramSteeringPinNum, char **paramDrivePinName, int paramDrivePinNum){
 	CCData *temp = (CCData *)malloc(sizeof(CCData));
 	if(temp == NULL) return NULL;
-	
+
 	CCData_set(temp, paramData);
-	temp->steeringGpio = paramSteeringGpio;
-	temp->driveGpio = paramDriveGpio;
+	BBB_gpioArray_init(temp->steeringGpio, paramSteeringPinName, paramSteeringPinNum);
+	temp->steeringPinNum = paramSteeringPinNum;
+	BBB_gpioArray_init(temp->driveGpio, paramDrivePinName, paramDrivePinNum);
+	temp->drivePinNum = paramDrivePinNum;
 	
 	return temp;
 }
@@ -58,10 +59,10 @@ void CCData_set(CCData *paramCCData, int paramData){
 
 void CCData_close(CCData *paramCCData){
 	if(paramCCData->steeringGpio != NULL){
-		BBB_gpioArray_close(paramCCData->steeringGpio, GPIOARRAYLENGTH);
+		BBB_gpioArray_close(paramCCData->steeringGpio, paramCCData->steeringPinNum);
 	}
 	if(paramCCData->driveGpio != NULL){
-		BBB_gpioArray_close(paramCCData->driveGpio, GPIOARRAYLENGTH);
+		BBB_gpioArray_close(paramCCData->driveGpio, paramCCData->drivePinNum);
 	}
 	free(paramCCData);
 }

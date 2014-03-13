@@ -9,8 +9,8 @@
 #define MAXPENDING 5
 #define STRINGLENGTH 8
 
-char frontPinName[CONTROLPIN][STRINGLENGTH] = {"P9_11", "P9_12"};
-char rearPinName[CONTROLPIN][STRINGLENGTH] = {"P9_13", "P9_14"};
+char steeringPinName[CONTROLPIN][STRINGLENGTH] = {"P9_11", "P9_12"};
+char drivePinName[CONTROLPIN][STRINGLENGTH] = {"P9_13", "P9_14"};
 
 void init();
 void signalCatch(int);
@@ -18,8 +18,8 @@ void errMsg(char *);
 void HandleTCPClient(int);
 void endProcess();
 
-BBB_gpio *frontGpio[CONTROLPIN];
-BBB_gpio *rearGpio[CONTROLPIN];
+CCData *ccData;
+int carControlParam = 0;
 
 int main()
 {
@@ -35,8 +35,7 @@ void init(){
 		puts("シグナルハンドラの登録に失敗しました");
 		exit(EXIT_FAILURE);
 	}
-	BBB_gpioArray_init(frontGpio, (char **)frontPinName, CONTROLPIN);
-	BBB_gpioArray_init(rearGpio, (char **)rearPinName, CONTROLPIN);
+	ccData = CCData_create(carControlParam, (char **)steeringPinName, CONTROLPIN, (char **)drivePinName, CONTROLPIN);
 }
 
 void signalCatch(int sig){
@@ -47,8 +46,7 @@ void signalCatch(int sig){
 }
 
 void endProcess(){
-	BBB_gpioArray_close(frontGpio, CONTROLPIN);
-	BBB_gpioArray_close(rearGpio, CONTROLPIN);
+	CCData_close(ccData);
 }
 
 void errMsg(char *msg){
