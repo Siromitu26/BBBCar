@@ -3,14 +3,16 @@
 #include <BBB_GPIO.h>
 #include <stdio.h>
 #include <stdlib.h>
-
+#define GPIOARRAYLENGTH 2
 void BBB_gpioArray_init(BBB_gpio **paramGpio, char **paramPinName, int paramPinNum){
 	int i = 0;
 	while(i < paramPinNum){
 		if((paramGpio[i] = BBB_open_gpio(paramPinName[i])) == NULL ) {
 			printf("Can not open %s\n", paramPinName[i] );
+			BBB_gpioArray_close(paramGpio, i);
 			exit(EXIT_FAILURE);
 		}
+		
 		paramGpio[i]->set_direction(paramGpio[i], OUT);
 		paramGpio[i]->put(paramGpio[i], 0);
 		i++;
@@ -24,13 +26,59 @@ void BBB_gpioArray_close(BBB_gpio **paramGpio, int paramPinNum){
 	}
 }
 
-void motorControl(BBB_gpio **paramGpio, int paramData){
-/* *pinはモーター制御用の信号ピンを制御するBBB_gpioの配列（要素は2つ） */
-/* dataのビット値でモーターの制御をする	*/
-/* 		00 : フリー		*/
-/* 		01 : 正回転		*/
-/* 		10 : 逆回転		*/
-/* 		11 : ブレーキ		*/
+CCData *CCData_create(int paramData, BBB_gpio **paramSteeringGpio, BBB_gpio **paramDriveGpio){
+	CCData *temp = (CCData *)malloc(sizeof(CCData));
+	if(temp == NULL) return NULL;
+	
+	CCData_set(temp, paramData);
+	temp->steeringGpio = paramSteeringGpio;
+	temp->driveGpio = paramDriveGpio;
+	
+	return temp;
+}
+
+void CCData_set(CCData *paramCCData, int paramData){
+	if(paramCCData == NULL) return;
+	
+	int steering;
+	int drive;
+	int spwm;
+	int dpwm;
+	
+	steering = paramData & 3;
+	drive = (paramData >> 2) & 3;
+	spwm = (paramData >> 4) & 255;
+	dpwm = (paramData >> 12) & 255;
+	
+	paramCCData->steering = steering;
+	paramCCData->spwm = spwm;
+	paramCCData->drive = drive;
+	paramCCData->dpwm = dpwm;
+}
+
+void CCData_close(CCData *paramCCData){
+	if(paramCCData->steeringGpio != NULL){
+		BBB_gpioArray_close(paramCCData->steeringGpio, GPIOARRAYLENGTH);
+	}
+	if(paramCCData->driveGpio != NULL){
+		BBB_gpioArray_close(paramCCData->driveGpio, GPIOARRAYLENGTH);
+	}
+	free(paramCCData);
+}
+
+void carControl(CCData *paramCCData){
+	motorDrive(paramCCData->steeringGpio, paramCCData->steering);
+	motorDrive(paramCCData->driveGpio, paramCCData->drive);
+}
+
+void motorDrive(BBB_gpio **paramGpio, int paramData){
+/* **paramGpioはモーター制御用の信号ピンを制御するBBB_gpioの配列（要素は2つ）
+	dataのビット値でモーターの制御をする
+ 		00 : フリー
+ 		01 : 正回転
+ 		10 : 逆回転
+ 		11 : ブレーキ		
+*/
 	switch(paramData){
 		case 0:	//00
 		paramGpio[0]->put(paramGpio[0], 0);
@@ -56,3 +104,6 @@ void motorControl(BBB_gpio **paramGpio, int paramData){
 		break;
 	}
 }
+
+
+
