@@ -28,8 +28,8 @@ void endProcess();
 CCData *ccData;
 int carControlParam;
 int carControlParamState;
-int *serverSock;
-int *clientSock;
+int serverSock;
+int clientSock;
 struct sockaddr_in addr;
 struct sockaddr_in client;
 int endFlag;
@@ -58,86 +58,16 @@ int main()
 }	
 
 void init(){
+	
 	if(SIG_ERR == signal(SIGINT, signalCatch)){
-		puts("シグナルハンドラの登録に失敗しました");
-		exit(EXIT_FAILURE);
+		endMsg("シグナルハンドラの登録に失敗しました", EXIT_FAILURE);
 	}
 	carControlParam = 0;
 	endFlag = 0;
 }
 
-void showCarControlStatus(CCData *paramCCData){
-	char steeringStatus[STRINGLENGTH];
-	char driveStatus[STRINGLENGTH];
-	int spwmPercent = (paramCCData->spwm) / 255;
-	int dpwmPercent = (paramCCData->dpwm) / 255;
+int serverStart(int paramPort, struct sockaddr_in *paramAddr, size_t paramSizeAddr){
 	
-	switch(paramCCData->steering){
-		case 0:
-		strcpy(steeringStatus, "直進");
-		break;
-		
-		case 1:
-		strcpy(steeringStatus, "左折");
-		break;
-		
-		case 2:
-		strcpy(steeringStatus, "右折");
-		break;
-		
-		default:
-		strcpy(steeringStatus, "不明な値");
-		break;
-	}
-	switch(paramCCData->drive){
-		case 0:
-		strcpy(driveStatus, "フリー");
-		break;
-		
-		case 1:
-		strcpy(driveStatus, "前進");
-		break;
-		
-		case 2:
-		strcpy(driveStatus, "後退");
-		break;
-		
-		case 3:
-		strcpy(driveStatus, "ブレーキ");
-		break;
-		
-		default:
-		strcpy(driveStatus, "不明な値");
-		break;
-	}
-	
-	printf("-------------------------------\n");
-	printf("受信データ:%d                    \n", paramCCData->carControlParam);
-	printf("     2進数"); printDecToBit(paramCCData->carControlParam, sizeof(int) * 8);
-	printf("                               \n");
-	printf("                               \n");
-	printf("操作データにデコードした結果         \n");
-	printf("  ハンドル:%s                    \n", steeringStatus);
-	printf("       PWM:%d%%                \n", spwmPercent);
-	printf("                               \n");
-	printf("  ドライブ:%s                     \n", driveStatus);
-	printf("       PWM:%d%%                \n", dpwmPercent);	
-	printf(	"------------------------------\n");
-}
-
-void printDecToBit(int paramDec, int paramLength){
-	int i = 0;
-	while(i < paramLength){
-		if(paramDec & (1 << (paramLength - 1 - i))){
-			putchar('1');
-		} else {
-			putchar('0');
-		}
-		i++;
-	}
-}
-
-int *serverStart(int paramPort, struct sockaddr_in *paramAddr, size_t paramSizeAddr){
 	int socket0;
 	int yes = 1;
 	
@@ -153,7 +83,7 @@ int *serverStart(int paramPort, struct sockaddr_in *paramAddr, size_t paramSizeA
 
 	listen(socket0, QUEUE_LIMIT);
 	
-	return &socket0;
+	return socket0;
 }
 
 int *connection(int *paramServerSock, struct sockaddr_in *paramClient, size_t paramSizeClient){
@@ -188,7 +118,7 @@ void endProcess(){
 	CCData_close(ccData);
 }
 
-void endMsg(char *paramMsg, int paramStatus{
+void endMsg(char *paramMsg, int paramStatus){
 	printf("%s\n", msg);
 	exit(paramStatus);
 }

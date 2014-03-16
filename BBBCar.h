@@ -11,13 +11,13 @@ typedef struct CarControlData_t{
 	int steeringState;//衝突電流対策
 	BBB_gpio **steeringGpio;
 	int steeringPinNum;
-	int spwm;
+	int sPwm;
 	
 	int drive;
 	int driveState;//衝突電流対策
 	BBB_gpio **driveGpio;
 	int drivePinNum;
-	int dpwm;
+	int dPwm;
 	
 } CCData;
 
@@ -28,7 +28,8 @@ void CCData_set(CCData *, int);
 void CCData_close(CCData *);
 void carControl(CCData *);
 void motorDrive(BBB_gpio **, int);
-
+void showCarControlStatus(CCData *);
+void printDecToBit(int , int);
 
 #define _BBBCAR_H_ 1
 #endif
