@@ -4,9 +4,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
+#define DEBUG_MODE 1
 
 void BBB_gpioArray_init(BBB_gpio **paramGpio, char **paramPinName, int paramPinNum){
-
+	if(DEBUG_MODE) return;
 	int i = 0;
 	while(i < paramPinNum){
 		if((paramGpio[i] = BBB_open_gpio(paramPinName[i])) == NULL ) {
@@ -21,7 +23,7 @@ void BBB_gpioArray_init(BBB_gpio **paramGpio, char **paramPinName, int paramPinN
 }
 
 void BBB_gpioArray_close(BBB_gpio **paramGpio, int paramPinNum){
-	
+	if(DEBUG_MODE) return;
 	int i = 0;
 	while(i < paramPinNum){
 		BBB_close_gpio(paramGpio[i++]);
@@ -52,6 +54,7 @@ void CCData_set(CCData *paramCCData, int paramData){
       23bit LED
       24bit LED
       25bit LED
+	  26bit EndFlag
 */
 	if(paramCCData == NULL) return;
 
@@ -83,12 +86,8 @@ void carControl(CCData *paramCCData){
 	motorDrive(paramCCData->steeringGpio, paramCCData->steering);		
 	motorDrive(paramCCData->driveGpio, paramCCData->drive);
 
-	if(paramCCData->steering != NULL){
-		paramCCData->steeringState = paramCCData->steering;
-	}
-	if(paramCCData->drive != NULL){
-		paramCCData->driveState = paramCCData->drive;
-	}
+	paramCCData->steeringState = paramCCData->steering;
+	paramCCData->driveState = paramCCData->drive;
 }
 
 void motorDrive(BBB_gpio **paramGpio, int paramData){
@@ -99,6 +98,8 @@ void motorDrive(BBB_gpio **paramGpio, int paramData){
  		10 : 逆回転
  		11 : ブレーキ		
 */
+	if(paramGpio == NULL) return;
+	
 	switch(paramData){
 		case 0:	//00
 		paramGpio[0]->put(paramGpio[0], 0);
@@ -127,6 +128,10 @@ void motorDrive(BBB_gpio **paramGpio, int paramData){
 
 void showCarControlStatus(CCData *paramCCData){
 
+	if(paramCCData == NULL){
+		puts("CCDataはNULLです");
+		return;
+	}
 	char steeringStatus[9];
 	char driveStatus[9];
 	
@@ -176,10 +181,10 @@ void showCarControlStatus(CCData *paramCCData){
 	printf("                               \n");
 	printf("操作データにデコードした結果         \n");
 	printf("  ハンドル:%s                    \n", steeringStatus);
-	printf("       PWM:%d%%                \n", (paramCCData->sPwm) / 255);
+	printf("       PWM:%d%%                \n", (paramCCData->sPwm * 100) / 255);
 	printf("                               \n");
 	printf("  ドライブ:%s                     \n", driveStatus);
-	printf("       PWM:%d%%                \n", (paramCCData->dPwm) / 255);	
+	printf("       PWM:%d%%                \n", (paramCCData->dPwm * 100) / 255);	
 	printf(	"------------------------------\n");
 }
 

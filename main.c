@@ -2,25 +2,23 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <string.h>
 #include <signal.h>
+#include <string.h>
+#include <sys/types.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
 
 #define MAXPENDING 5
 #define CONTROLPIN 2
 #define STRINGLENGTH 8
 #define QUEUE_LIMIT 5
 
+
 char steeringPinName[CONTROLPIN][STRINGLENGTH] = {"P9_11", "P9_12"};
 char drivePinName[CONTROLPIN][STRINGLENGTH] = {"P9_13", "P9_14"};
 int port = 12345;
 
 void init();
-void showCarControlStatus(CCData *);
-void printDecToBit(int, int);
-int *serverStart(int, struct sockaddr_in *, size_t);
-int *connection(int *, struct sockaddr_in *, size_t);
-int receive(int *);
 void signalCatch(int);
 void endMsg(char *, int);
 void endProcess();
@@ -30,6 +28,8 @@ int carControlParam;
 int carControlParamState;
 int serverSock;
 int clientSock;
+int clientLength;
+int yes = 1;
 struct sockaddr_in addr;
 struct sockaddr_in client;
 int endFlag;
@@ -40,19 +40,40 @@ int main()
 	
 	ccData = CCData_create(carControlParam, (char **)steeringPinName, CONTROLPIN, (char **)drivePinName, CONTROLPIN);
 	
-	serverSock = serverStart(port, &addr, sizeof(addr));
+	serverSock = socket(AF_INET, SOCK_STREAM, 0);
+
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons(port);
+	addr.sin_addr.s_addr = INADDR_ANY;
+
+	setsockopt(serverSock, SOL_SOCKET, SO_REUSEADDR, (const char *)&yes, sizeof(yes));
+
+	bind(serverSock, (struct sockaddr *)&addr, sizeof(addr));
+
+	listen(serverSock, QUEUE_LIMIT);
 
 	while (!endFlag) {
-		clientSock = connection(serverSock, &client, sizeof(client));
+		clientLength = sizeof(client);
+		printf("Connecting...\n");
+		clientSock = accept(serverSock, (struct sockaddr *)&client, &clientLength);
+		printf("Accepted connectionion from %s, Port=%d\n", (char *)inet_ntoa(client.sin_addr), ntohs(client.sin_port));
+	
 		while(!endFlag){
-			carControlParam = receive(clientSock);
+			memset(&carControlParam, 0, sizeof(carControlParam));
+			if(recv(clientSock, &carControlParam, sizeof(carControlParam), 0) < 0){
+				perror("read");
+				endMsg(NULL, EXIT_FAILURE);
+			}
 			CCData_set(ccData, carControlParam);
 			showCarControlStatus(ccData);
 			carControl(ccData);
+			endFlag = (carControlParam >> 24) & 1;
 		}
-		close(*clientSock);
+		close(clientSock);
 	}
-	close(*serverSock);
+	close(serverSock);
+	
+	endProcess();
 	
 	return 0;
 }	
@@ -60,66 +81,27 @@ int main()
 void init(){
 	
 	if(SIG_ERR == signal(SIGINT, signalCatch)){
-		endMsg("シグナルハンドラの登録に失敗しました", EXIT_FAILURE);
+		endMsg("\nシグナルハンドラの登録に失敗しました", EXIT_FAILURE);
 	}
 	carControlParam = 0;
 	endFlag = 0;
 }
 
-int serverStart(int paramPort, struct sockaddr_in *paramAddr, size_t paramSizeAddr){
-	
-	int socket0;
-	int yes = 1;
-	
-	socket0 = socket(AF_INET, SOCK_STREAM, 0);
-
-	paramAddr->sin_family = AF_INET;
-	paramAddr->sin_port = htons(paramPort);
-	(paramAddr->sin_addr).s_addr = INADDR_ANY;
-
-	setsockopt(socket0, SOL_SOCKET, SO_REUSEADDR, (const char *)&yes, sizeof(yes));
-
-	bind(socket0, (struct sockaddr *)paramAddr, paramSizeAddr);
-
-	listen(socket0, QUEUE_LIMIT);
-	
-	return socket0;
-}
-
-int *connection(int *paramServerSock, struct sockaddr_in *paramClient, size_t paramSizeClient){
-	int sock;
-	
-	sock = accept(*paramServerSock, (struct sockaddr *)paramClient, &paramSizeClient);
-	
-	printf("Accepted connectionion from %s, Port=%d\n", (char *)inet_ntoa(paramClient->sin_addr), ntohs(paramClient->sin_port));
-	
-	return &sock;
-}
-
-int receive(int *paramSocket){
-	int temp;
-	memset(&temp, 0, sizeof(temp));
-	if(recv(*paramSocket, &temp, sizeof(temp), 0) < 0){
-		perror("read");
-		endMsg(NULL, EXIT_FAILURE);
-	}
-	return temp;
-}
-
 void signalCatch(int paramSig){
-	if(sig == SIGINT){
+	if(paramSig == SIGINT){
 		endProcess();
 		endMsg("Ctrl+Cが入力されました", EXIT_SUCCESS);
 	}
-	
 }
 
 void endProcess(){
 	CCData_close(ccData);
+	close(clientSock);
+	close(serverSock);
 }
 
 void endMsg(char *paramMsg, int paramStatus){
-	printf("%s\n", msg);
+	printf("%s\n", paramMsg);
 	exit(paramStatus);
 }
 	

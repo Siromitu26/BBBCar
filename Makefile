@@ -1,7 +1,6 @@
 ﻿CC=gcc
 OBJS=main.o BBBCar.o
-CFLAGS=-lBBB
-#-W -Wall -lBBB
+CFLAGS=-W -Wall -lBBB
 PROGRAM=BBBCarControlServer 
 RM=rm -f
 .SUFFIXES: .c .o
