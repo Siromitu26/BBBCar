@@ -5,21 +5,43 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#define DEBUG_MODE 1
+#define DEBUG_MODE 0
 
 void BBB_gpioArray_init(BBB_gpio **paramGpio, char **paramPinName, int paramPinNum){
 	if(DEBUG_MODE) return;
+	paramGpio = (BBB_gpio **)malloc(sizeof(BBB_gpio *) * paramPinNum);
+		if(paramGpio == NULL) puts("null0");
+
 	int i = 0;
+	int temp = 0;
+	int flag = 0;
+	
 	while(i < paramPinNum){
-		if((paramGpio[i] = BBB_open_gpio(paramPinName[i])) == NULL ) {
+		paramGpio[i] = BBB_open_gpio(paramPinName[i]);
+		if(paramGpio[i] == NULL ) {
 			printf("GPIO \"%s\" がオープンできませんでしたn", paramPinName[i] );
 			BBB_gpioArray_close(paramGpio, i);
 			exit(EXIT_FAILURE);
+		} else {
+			printf("%s opened.\n", paramPinName[i]);
 		}
 		paramGpio[i]->set_direction(paramGpio[i], OUT);
 		paramGpio[i]->put(paramGpio[i], 0);
+		
 		i++;
 	}
+	printf("%d\n", i);
+	
+	i = 0;
+	while(!flag){
+			printf("testDrive:");
+			scanf("%d", &temp);
+			motorDrive(paramGpio, temp);
+			printf("flag:");
+			scanf("%d", &flag);
+	}
+	
+	if(paramGpio == NULL) puts("nulle");
 }
 
 void BBB_gpioArray_close(BBB_gpio **paramGpio, int paramPinNum){
@@ -28,6 +50,7 @@ void BBB_gpioArray_close(BBB_gpio **paramGpio, int paramPinNum){
 	while(i < paramPinNum){
 		BBB_close_gpio(paramGpio[i++]);
 	}
+	free(paramGpio);
 }
 
 CCData *CCData_create(int paramData, char **paramSteeringPinName, int paramSteeringPinNum, char **paramDrivePinName, int paramDrivePinNum){
@@ -36,6 +59,8 @@ CCData *CCData_create(int paramData, char **paramSteeringPinName, int paramSteer
 	if(temp == NULL) return NULL;
 
 	CCData_set(temp, paramData);
+	
+	
 	BBB_gpioArray_init(temp->steeringGpio, paramSteeringPinName, paramSteeringPinNum);
 	temp->steeringPinNum = paramSteeringPinNum;
 	BBB_gpioArray_init(temp->driveGpio, paramDrivePinName, paramDrivePinNum);
@@ -82,7 +107,7 @@ void carControl(CCData *paramCCData){
 	int steeringWaitFlag = ((paramCCData->steering < 3)&(paramCCData->steeringState < 3)&((paramCCData->steering ^ paramCCData->steeringState) == 3)) | ((paramCCData->steering > 0) & (paramCCData->steeringState == 3));
 	int driveWaitFlag = ((paramCCData->drive < 3)&(paramCCData->driveState < 3)&((paramCCData->drive ^ paramCCData->driveState) == 3)) | ((paramCCData->drive > 0) & (paramCCData->driveState == 3));
 	if(steeringWaitFlag | driveWaitFlag) usleep(100);
-	
+	puts("test");
 	motorDrive(paramCCData->steeringGpio, paramCCData->steering);		
 	motorDrive(paramCCData->driveGpio, paramCCData->drive);
 
@@ -99,7 +124,7 @@ void motorDrive(BBB_gpio **paramGpio, int paramData){
  		11 : ブレーキ		
 */
 	if(paramGpio == NULL) return;
-	
+	puts("test");
 	switch(paramData){
 		case 0:	//00
 		paramGpio[0]->put(paramGpio[0], 0);

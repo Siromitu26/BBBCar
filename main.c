@@ -7,6 +7,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 
 #define MAXPENDING 5
 #define CONTROLPIN 2
@@ -14,8 +15,8 @@
 #define QUEUE_LIMIT 5
 
 
-char steeringPinName[CONTROLPIN][STRINGLENGTH] = {"P9_11", "P9_12"};
-char drivePinName[CONTROLPIN][STRINGLENGTH] = {"P9_13", "P9_14"};
+char *steeringPinName[STRINGLENGTH] = {"P9_11", "P9_12"};
+char *drivePinName[STRINGLENGTH] = {"P9_13", "P9_14"};
 int port = 12345;
 
 void init();
@@ -28,7 +29,7 @@ int carControlParam;
 int carControlParamState;
 int serverSock;
 int clientSock;
-int clientLength;
+socklen_t clientSock_len;
 int yes = 1;
 struct sockaddr_in addr;
 struct sockaddr_in client;
@@ -39,7 +40,23 @@ int main()
 	init();
 	
 	ccData = CCData_create(carControlParam, (char **)steeringPinName, CONTROLPIN, (char **)drivePinName, CONTROLPIN);
+	if(ccData->driveGpio == NULL) puts("null");
+	int temp = 0;
+	while(!endFlag){
+		printf("SteeringParam:");
+		scanf("%d", &temp);
+		carControlParam = temp;
+		printf("DriveParam");
+		scanf("%d", &temp);
+		carControlParam += temp << 2;
+		printf("endFlag:");
+		scanf("%d", &endFlag);
+		CCData_set(ccData, carControlParam);
+		showCarControlStatus(ccData);
+		carControl(ccData);
+	}
 	
+	/*
 	serverSock = socket(AF_INET, SOCK_STREAM, 0);
 
 	addr.sin_family = AF_INET;
@@ -53,9 +70,9 @@ int main()
 	listen(serverSock, QUEUE_LIMIT);
 
 	while (!endFlag) {
-		clientLength = sizeof(client);
+		clientSock_len = sizeof(client);
 		printf("Connecting...\n");
-		clientSock = accept(serverSock, (struct sockaddr *)&client, &clientLength);
+		clientSock = accept(serverSock, (struct sockaddr *)&client, &clientSock_len);
 		printf("Accepted connectionion from %s, Port=%d\n", (char *)inet_ntoa(client.sin_addr), ntohs(client.sin_port));
 	
 		while(!endFlag){
@@ -72,7 +89,7 @@ int main()
 		close(clientSock);
 	}
 	close(serverSock);
-	
+	*/
 	endProcess();
 	
 	return 0;

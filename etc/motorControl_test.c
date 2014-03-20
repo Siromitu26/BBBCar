@@ -28,23 +28,23 @@ int main(int argc, char *argv[])
 		scanf("%d", &ctrNum);
 		switch(ctrNum){
 			case 0:
-			gpio[0]->put(gpio[0], 0);
-			gpio[1]->put(gpio[1], 0);
+			gpio[2]->put(gpio[2], 0);
+			gpio[3]->put(gpio[3], 0);
 			break;
 
 			case 1:
-			gpio[0]->put(gpio[0], 0);
-			gpio[1]->put(gpio[1], 1);
+			gpio[2]->put(gpio[2], 0);
+			gpio[3]->put(gpio[3], 1);
 			break;
 
 			case 10:
-			gpio[0]->put(gpio[0], 1);
-			gpio[1]->put(gpio[1], 0);
+			gpio[2]->put(gpio[2], 1);
+			gpio[3]->put(gpio[3], 0);
 			break;
 
 			case 11:
-			gpio[0]->put(gpio[0], 1);
-			gpio[1]->put(gpio[1], 1);
+			gpio[2]->put(gpio[2], 1);
+			gpio[3]->put(gpio[3], 1);
 			break;
 	
 			case 99:
@@ -54,10 +54,11 @@ int main(int argc, char *argv[])
 
 			default:
 			printf("Illegal number was typed!!\n");
+			ctrNum = 0;
 			break;
 		}
 		printf("Now Status: gpio0:%d gpio1:%d\n"
-			"------------------------------\n\n\n", gpio[0]->get(gpio[0]), gpio[1]->get(gpio[1]));
+			"------------------------------\n\n\n", gpio[2]->get(gpio[2]), gpio[3]->get(gpio[3]));
 	}
 
 	for(i = 0; i < 4; i++){
