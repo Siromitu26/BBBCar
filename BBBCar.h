@@ -21,7 +21,7 @@ typedef struct CarControlData_t{
 	
 } CCData;
 
-void BBB_gpioArray_init(BBB_gpio **, char **, int);
+BBB_gpio **BBB_gpioArray_init(char **, int);
 void BBB_gpioArray_close(BBB_gpio **, int);
 CCData *CCData_create(int, char **, int, char **, int);
 void CCData_set(CCData *, int);

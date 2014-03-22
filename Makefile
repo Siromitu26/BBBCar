@@ -13,4 +13,3 @@ $(PROGRAM): $(OBJS)
 .PHONY: clean
 clean:
 	$(RM) $(PROGRAM) $(OBJS)
-	
