@@ -14,6 +14,7 @@
 #define STRINGLENGTH 8
 #define QUEUE_LIMIT 5
 
+#define DEBUG
 
 char *steeringPinName[STRINGLENGTH] = {"P9_11", "P9_12"};
 char *drivePinName[STRINGLENGTH] = {"P9_13", "P9_14"};
@@ -37,16 +38,20 @@ int endFlag;
 
 int main()
 {
+#ifdef DEBUG
+	printf("---------Debug Mode---------\n");
+#endif
+
 	init();
 	
 	ccData = CCData_create(carControlParam, (char **)steeringPinName, CONTROLPIN, (char **)drivePinName, CONTROLPIN);
-	if(ccData->driveGpio == NULL) puts("null");
+#ifdef DEBUG	
 	int temp = 0;
 	while(!endFlag){
 		printf("SteeringParam:");
 		scanf("%d", &temp);
 		carControlParam = temp;
-		printf("DriveParam");
+		printf("DriveParam:");
 		scanf("%d", &temp);
 		carControlParam += temp << 2;
 		printf("endFlag:");
@@ -56,7 +61,8 @@ int main()
 		carControl(ccData);
 	}
 	
-	/*
+#else 
+	
 	serverSock = socket(AF_INET, SOCK_STREAM, 0);
 
 	addr.sin_family = AF_INET;
@@ -89,7 +95,8 @@ int main()
 		close(clientSock);
 	}
 	close(serverSock);
-	*/
+	
+#endif
 	endProcess();
 	
 	return 0;
