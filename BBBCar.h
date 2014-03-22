@@ -27,6 +27,7 @@ CCData *CCData_create(int, char **, int, char **, int);
 void CCData_set(CCData *, int);
 void CCData_close(CCData *);
 void carControl(CCData *);
+int isMotorDelay(int, int);
 void motorDrive(BBB_gpio **, int);
 void showCarControlStatus(CCData *);
 void printDecToBit(int , int);

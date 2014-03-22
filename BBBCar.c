@@ -6,7 +6,8 @@
 #include <unistd.h>
 #include <string.h>
 #define MOTORDELAYTIME 100 //microsec
-#define DEBUG
+
+
 
 BBB_gpio **BBB_gpioArray_init(char **paramPinName, int paramPinNum){
 
@@ -25,9 +26,9 @@ BBB_gpio **BBB_gpioArray_init(char **paramPinName, int paramPinNum){
 	while(i < paramPinNum){
 		temp[i] = BBB_open_gpio(paramPinName[i]);
 		if(temp[i] == NULL ) {		
-			printf("GPIO \"%s\" がオープンできませんでしたn", paramPinName[i] );
+			printf("%s:GPIO \"%s\" がオープンできませんでした\n", __func__, paramPinName[i] );
 			BBB_gpioArray_close(temp, i);
-			exit(EXIT_FAILURE);
+			return NULL;
 #ifdef DEBUG
 		} else {
 			printf("%s:%d Success open GPIO:%s.\n", __func__, __LINE__, paramPinName[i]);
@@ -40,6 +41,8 @@ BBB_gpio **BBB_gpioArray_init(char **paramPinName, int paramPinNum){
 	return temp;
 }
 
+
+
 void BBB_gpioArray_close(BBB_gpio **paramGpio, int paramPinNum){
 	int i = 0;
 	while(i < paramPinNum){
@@ -49,11 +52,10 @@ void BBB_gpioArray_close(BBB_gpio **paramGpio, int paramPinNum){
 		BBB_close_gpio(paramGpio[i++]);
 #endif
 	}
-#ifdef DEBUG
-	printf("%s:%d\n", __func__, __LINE__);
-#endif	
 	free(paramGpio);
 }
+
+
 
 CCData *CCData_create(int paramData, char **paramSteeringPinName, int paramSteeringPinNum, char **paramDrivePinName, int paramDrivePinNum){
 
@@ -63,18 +65,42 @@ CCData *CCData_create(int paramData, char **paramSteeringPinName, int paramSteer
 		printf("%s:%d Failed malloc.\n", __func__, __LINE__);
 #endif		
 		return NULL;
+#ifdef DEBUG
+	} else {
+		printf("%s:%d Success allocate CCData.\n", __func__, __LINE__);
+#endif
 	}
+	
 	CCData_set(temp, paramData);
 	
 	temp->steeringGpio = BBB_gpioArray_init(paramSteeringPinName, paramSteeringPinNum);
 	temp->steeringPinNum = paramSteeringPinNum;
+	if(temp->steeringGpio == NULL){
+#ifdef DEBUG
+		printf("%s:%d SteeringGpio is NULL.\n", __func__, __LINE__);
+#endif	
+		CCData_close(temp);
+		return NULL;
+	}
+	
+	temp->steeringPinNum = paramSteeringPinNum;
 	temp->driveGpio = BBB_gpioArray_init(paramDrivePinName, paramDrivePinNum);
 	temp->drivePinNum = paramDrivePinNum;
+	if(temp->driveGpio == NULL){
 #ifdef DEBUG
-	printf("%s:%d End of func.\n", __func__, __LINE__);
+		printf("%s:%d DriveGpio is NULL.\n", __func__, __LINE__);
 #endif	
+		CCData_close(temp);
+		return NULL;
+	}
+	temp->steeringState = 0;
+	temp->driveState = 0;
+	
+
 	return temp;
 }
+
+
 
 void CCData_set(CCData *paramCCData, int paramData){
 /* ParamData内訳
@@ -104,6 +130,7 @@ void CCData_set(CCData *paramCCData, int paramData){
 
 void CCData_close(CCData *paramCCData){
 
+	CCData_set(paramCCData, 0);
 	if(paramCCData->steeringGpio != NULL){
 		BBB_gpioArray_close(paramCCData->steeringGpio, paramCCData->steeringPinNum);
 	}
@@ -113,14 +140,19 @@ void CCData_close(CCData *paramCCData){
 	free(paramCCData);
 }
 
+
+
 void carControl(CCData *paramCCData){
+
 	/* 正転⇔逆転、正転or逆転⇔ブレーキ時を判定して100us待機 */
-	int steeringDelayFlag = ((paramCCData->steering < 3)&(paramCCData->steeringState < 3)&((paramCCData->steering ^ paramCCData->steeringState) == 3)) | ((paramCCData->steering > 0) & (paramCCData->steeringState == 3));
-	int driveDelayFlag = ((paramCCData->drive < 3)&(paramCCData->driveState < 3)&((paramCCData->drive ^ paramCCData->driveState) == 3)) | ((paramCCData->drive > 0) & (paramCCData->driveState == 3));
+	int steeringDelayFlag = isMotorDelay(paramCCData->steering, paramCCData->steeringState);
+	int driveDelayFlag = isMotorDelay(paramCCData->drive, paramCCData->driveState);
 #ifdef DEBUG
-		printf("%s:%d SteeringDelayFlag:%d, DriveDelayFlag:%d\n", __func__, __LINE__, steeringDelayFlag, driveDelayFlag);
+	printf("%s:%d SteeringDelayFlag:%d, DriveDelayFlag:%d\n", __func__, __LINE__, steeringDelayFlag, driveDelayFlag);
 #endif
-	if(steeringDelayFlag | driveDelayFlag) usleep(MOTORDELAYTIME);
+	if(steeringDelayFlag) motorDrive(paramCCData->steeringGpio, 0);
+	if(driveDelayFlag) motorDrive(paramCCData->driveGpio, 0);
+	if(steeringDelayFlag || driveDelayFlag) usleep(MOTORDELAYTIME);
 	
 	motorDrive(paramCCData->steeringGpio, paramCCData->steering);		
 	motorDrive(paramCCData->driveGpio, paramCCData->drive);
@@ -128,6 +160,32 @@ void carControl(CCData *paramCCData){
 	paramCCData->steeringState = paramCCData->steering;
 	paramCCData->driveState = paramCCData->drive;
 }
+
+int isMotorDelay(int paramData, int paramDataState){
+	int flag = 0;
+	switch(paramData){
+		case 0:
+		break;
+		
+		case 1:
+		if((paramDataState == 2) || (paramDataState == 3)) flag = 1;
+		break;
+		
+		case 2:
+		if((paramDataState == 1) || (paramDataState == 3)) flag = 1;
+		break;
+		
+		case 3:
+		if((paramDataState == 1) || (paramDataState == 2)) flag = 1;
+		break;
+		
+		default:
+		flag = 1;
+		break;
+	}
+	return flag;
+}
+
 
 void motorDrive(BBB_gpio **paramGpio, int paramData){
 /* **paramGpioはモーター制御用の信号ピンを制御するBBB_gpioの配列（要素は2つ）
@@ -145,7 +203,7 @@ void motorDrive(BBB_gpio **paramGpio, int paramData){
 	}
 	
 #ifdef DEBUG
-	printf("%s:%d paramData:%d\n", __func__, __LINE__, paramData);
+	printf("%s:%d Parameter Data:%d\n", __func__, __LINE__, paramData);
 #endif		
 	switch(paramData){
 		case 0:	//00
@@ -176,6 +234,8 @@ void motorDrive(BBB_gpio **paramGpio, int paramData){
 	printf("%s:%d paramGpio[0]:%d, paramGpio[1]:%d\n", __func__, __LINE__, paramGpio[0]->get(paramGpio[0]), paramGpio[1]->get(paramGpio[1]));
 #endif	
 }
+
+
 
 void showCarControlStatus(CCData *paramCCData){
 
@@ -243,6 +303,8 @@ void showCarControlStatus(CCData *paramCCData){
 	printf("       PWM:%d%%                \n", (paramCCData->dPwm * 100) / 255);	
 	printf(	"------------------------------\n");
 }
+
+
 
 void printDecToBit(int paramDec, int paramLength){
 	
